@@ -1,0 +1,191 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Face Attendance System</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2, #ff7eb3);
+    background-size: 300% 300%;
+    animation: gradientMove 8s ease infinite;
+    color: white;
+    text-align: center;
+}
+
+@keyframes gradientMove {
+    0% { background-position: 0% }
+    50% { background-position: 100% }
+    100% { background-position: 0% }
+}
+
+.container {
+    padding: 30px;
+}
+
+h2 {
+    font-size: 32px;
+}
+
+.camera-box {
+    background: rgba(255,255,255,0.15);
+    padding: 20px;
+    border-radius: 15px;
+    display: inline-block;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+input {
+    padding: 12px;
+    width: 250px;
+    border-radius: 8px;
+    border: none;
+    margin-top: 20px;
+    font-size: 16px;
+}
+
+button {
+    padding: 12px 20px;
+    margin: 10px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.start-btn { background: #00ffcc; }
+.stop-btn { background: #ff4d4d; color: white; }
+.capture-btn { background: #ffd700; }
+
+button:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+#status {
+    margin-top: 20px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.attendance-box {
+    margin-top: 30px;
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 10px;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+li {
+    padding: 8px;
+    background: rgba(0,0,0,0.3);
+    margin: 5px;
+    border-radius: 5px;
+}
+</style>
+
+</head>
+<body>
+
+<div class="container">
+
+    <h2>🎯 Face Attendance System</h2>
+
+    <div class="camera-box">
+        <img id="camera" width="600" style="border-radius:10px;">
+    </div>
+
+    <br><br>
+
+    <button class="start-btn" onclick="startCamera()">▶️ Start</button>
+    <button class="stop-btn" onclick="stopCamera()">⏹ Stop</button>
+
+    <br>
+
+    <input type="text" id="name" placeholder="Enter Your Name">
+    <button class="capture-btn" onclick="capture()">📸 Mark Attendance</button>
+
+    <div id="status"></div>
+
+    <div class="attendance-box">
+        <h3>📋 Today's Attendance</h3>
+        <ul id="attendanceList"></ul>
+    </div>
+
+</div>
+
+<script>
+let cameraOn = false;
+
+function startCamera() {
+    document.getElementById("camera").src = "{% url 'camera_feed' %}";
+    cameraOn = true;
+    updateStatus("📷 Camera Started", "lightgreen");
+}
+
+function stopCamera() {
+    document.getElementById("camera").src = "";
+    cameraOn = false;
+    updateStatus("⏹ Camera Stopped", "red");
+}
+
+function updateStatus(msg, color) {
+    let statusBox = document.getElementById("status");
+    statusBox.innerHTML = msg;
+    statusBox.style.color = color;
+}
+
+function capture() {
+    let nameInput = document.getElementById("name");
+    let name = nameInput.value;
+
+    if(!cameraOn) {
+        updateStatus("⚠️ Start camera first!", "yellow");
+        return;
+    }
+
+    if(name === "") {
+        updateStatus("⚠️ Enter your name!", "yellow");
+        return;
+    }
+
+    updateStatus("⏳ Processing...", "white");
+
+    fetch(`/capture/?name=${name}`)
+    .then(res => res.json())
+    .then(data => {
+
+        if(data.status === "success") {
+            updateStatus("✅ Attendance Marked!", "#00ffcc");
+
+            let list = document.getElementById("attendanceList");
+            let item = document.createElement("li");
+            item.innerText = name + " ✔️";
+            list.appendChild(item);
+
+            // ✅ CLEAR INPUT AFTER SUBMIT
+            nameInput.value = "";
+
+        } else if(data.status === "already_registered") {
+            updateStatus("⚠️ Already Registered!", "orange");
+
+        } else if(data.status === "no_face") {
+            updateStatus("❌ No Face Detected!", "red");
+
+        } else {
+            updateStatus("❌ Error!", "red");
+        }
+    });
+}
+</script>
+
+</body>
+</html>
